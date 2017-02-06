@@ -1,8 +1,16 @@
 """this module implements basic encoders - sklearn-like transformers
 that take a dataframe and transform it to a format compatible with sklearn
 regressors and classifiers while handling missing values.
-The encoder you will most likely want to use is MasterExploder.
-For usage example see test_master_exploder at the bottom.
+
+The goal is to output a dataframe where every column is either numeric or integral and has no
+missing values.
+
+The convention used throughout is that missing values in the *input* dataframe must be denoted by
+np.NaN for in numeric columns and by None in categorical (i.e. bool, str or int) columns.
+
+MissingNumericEncoder and MissingCategoricalEncoder should be seen as auxiliary, they each encode
+only one specified column of the dataframe. MasterExploder is the encoder that ties it all together.
+This is the one that should be used in most cases. For usage example see test_master_exploder at the bottom.
 """
 import pandas as pd
 import numpy as np
@@ -45,7 +53,7 @@ class MissingNumericEncoder(object):
 
 
 class MissingCategoricalEncoder(object):
-    """transformer that encodes a single non-numeric column as integer
+    """transformer that encodes a single integer or string column as integer
     This encoder only transforms one column of the input dataframe - specified
     in __init__, ignoring all the other columns. It returns a dataframe with
     a single column containing the encoded version of the original.
@@ -59,6 +67,11 @@ class MissingCategoricalEncoder(object):
     ['a']
     >>> list(encoded.a)
     [0, 1, 1, 2, 1, 2, 0]
+    >>> df = pd.DataFrame({'c': np.array(['x', None, 'y', 'z'])})
+    >>> encoder = MissingCategoricalEncoder('c')
+    >>> encoded = encoder.fit(df).transform(df)
+    >>> list(encoded.c)
+    [1, 0, 2, 3]
     """
 
     def __init__(self, column_name):
