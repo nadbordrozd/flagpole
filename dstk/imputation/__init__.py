@@ -2,6 +2,8 @@ from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 import numpy as np
 import pandas as pd
 from ml_imputation import MLImputer
+from bayes_imputation import BayesNetImputer
+from utils import mask_missing
 
 
 def DefaultImputer():
@@ -21,3 +23,13 @@ def sample_dataset():
         e=[3, N, N, 3, N, 3, 3, N]
     ))
     return datax
+
+
+def wet_dataset():
+    data = pd.DataFrame({
+        'rain':         [0, 0, 1, 1, 1, -1, 0, -1],
+        'sprinkler':    [0, 1, 1, 0, 1, 0, 1, -1],
+        'wet_sidewalk': [0, 1, 1, 1, 1, 1, -1, 0],
+        'some_numeric': [1.1, np.NaN, 0.2, -0.4, 0.1, 0.2, 0.0, 3.9]
+    })
+    return data
