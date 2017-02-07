@@ -34,6 +34,10 @@ def predict(sampler, data):
         else:
             predicted[feature_name] = values
 
+    for col in data:
+        if col not in sampler.observed_stochastics:
+            predicted[col] = data[col]
+
     return pd.DataFrame(predicted)
 
 
@@ -79,15 +83,15 @@ def test_RSWImputer_imputes_stuff():
     # in this dataset 'rain' and 'sprinkler' are independent,
     # while 'wet_sidewalk' is true iff either 'rain' or 'sprinkler' or both
     full_data = pd.DataFrame({
-        'rain': [0, 0, 1, 1, 1, 1, 0, 0],
-        'sprinkler': [0, 1, 1, 0, 1, 0, 1, 0],
-        'wet_sidewalk': [0, 1, 1, 1, 1, 1, 1, 0],
+        'rain':         [0, 0, 1, 1, 1, 1, 0, 0],
+        'sprinkler':    [0, 1, 1, 0, 1, 0, 1, 0],
+        'wet_sidewalk': [0, 1, 1, 1, 1, 1, 1, 0]
     })
 
     data = pd.DataFrame({
-        'rain': [0, 0, 1, 1, 1, -1, 0, -1],
-        'sprinkler': [0, 1, 1, 0, 1, 0, -1, -1],
-        'wet_sidewalk': [0, 1, 1, 1, 1, 1, 1, 0],
+        'rain':         [0, 0, 1, 1, 1, -1, 0, -1],
+        'sprinkler':    [0, 1, 1, 0, 1, 0, 1, -1],
+        'wet_sidewalk': [0, 1, 1, 1, 1, 1, -1, 0]
     })
 
     class RSWImputer(BayesNetImputer):
