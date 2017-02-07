@@ -55,7 +55,7 @@ prints
 7     0        3.9000          0             0
 ```
 
-This default imputer uses Random Forest regressors and classifiers under the hood that are trained to fill in one column at a time. It should be sufficient in most applications. It is possible to replace Random Forests with any other sklearn-compatible algorithm - for example SVM - like this:
+This default imputer uses XGBoost regressors and classifiers under the hood that are trained to fill in one column at a time. It should be sufficient in most applications. It is possible to replace Random Forests with any other sklearn-compatible algorithm - for example SVM - like this:
 
 ```python
 from dstk.imputation import MLImputer

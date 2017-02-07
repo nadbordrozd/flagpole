@@ -1,13 +1,12 @@
-from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 import numpy as np
 import pandas as pd
 from ml_imputation import MLImputer
 from bayes_imputation import BayesNetImputer
 from utils import mask_missing
-
+from xgboost.sklearn import XGBClassifier, XGBRegressor
 
 def DefaultImputer():
-    return MLImputer(base_classifier=RandomForestClassifier, base_regressor=RandomForestRegressor)
+    return MLImputer(base_classifier=XGBClassifier, base_regressor=XGBRegressor)
 
 
 def sample_dataset():
