@@ -113,7 +113,7 @@ and then use it the same way as the ML imputer:
 
 ```python
 imputer = RSWImputer(iter=500, burn=300, thin=2)
-filled_data = imputer.fit(data).predict(data)
+filled_data = imputer.fit(data).transform(data)
 
 print filled_data
 ```
