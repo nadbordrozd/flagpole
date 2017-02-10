@@ -92,14 +92,20 @@ class MissingCategoricalEncoder(object):
 class IdentityEncoder(object):
     """same interface as MissingCategoricalEncoder but doesn't do anything"""
 
-    def __init__(self, column_name):
+    def __init__(self, column_name=None):
         self.column_name = column_name
 
     def fit(self, df, y=None):
         return self
 
     def transform(self, df):
-        return df.get(self.column_name)
+        if self.column_name is None:
+            return df
+        else:
+            return df.get(self.column_name)
+
+    def inverse_transform(self, df):
+        return df
 
 
 class MasterExploder(object):
