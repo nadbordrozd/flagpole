@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from xgboost.sklearn import XGBClassifier, XGBRegressor
-
+from pandas.util.testing import assert_frame_equal
 from .ml_imputation import MLImputer
 from .encoders import StringFeatureEncoder
 
@@ -27,7 +27,7 @@ def test_MLImputer_imputes_missing_values():
         'a': ['A', 'B', 'C', 'A', 'B', 'C', 'A', 'B'],
         'b': [0, 0, 1, 0, 0, 0, 1, 0],
         'c': [1, 0, 0, 0, 0, 1, 0, 0],
-        'd': [0.002960, 2.130146, 1.000000, 0.002960, 2.130146, 2.140000, 2.130146]
+        'd': [0.002960, 2.130146, 1.000000, 0.002960, 2.130146, 2.140000, 0.0, 2.130146]
     })
 
-    assert expected.equals(result)
+    assert_frame_equal(result, expected, check_less_precise=True)
