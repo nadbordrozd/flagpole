@@ -2,32 +2,45 @@ from sklearn.pipeline import Pipeline
 import pandas as pd
 import numpy as np
 
-from encoders import MasterExploder
+from .encoders import IdentityEncoder
 from utils import missing_mask
 
 
 class MLImputer(object):
-    """generic class for imputing missing data with using ML models.
+    """generic class for imputing missing data using ML models.
     It uses a given regressor and a given classifier to impute numeric
     and categorical fields - respectively.
     For every column in the input dataframe a regressor (classifier) is
     trained on all the rows where this column is not missing. It is
     trained on all the remaining columns (if those other columns have
-    missing values themselves, they are imputed simply using median
-    (for numeric fields) or encoded as another class (for categorical).
+    missing values themselves, they are imputed using provided base_imputer.
 
     !!! it is assumed that missing values are encoded as NaN for float-y
-    columns and as -1 for categorical (and boolean) columns.
-    For example usage see test_MLImputer
+    columns and as -1 for categorical (and boolean) columns. If they are not, a
+    feature_encoder must be specified that will perform that encoding.
     """
 
-    def __init__(
-            self,
-            base_classifier=None,
-            base_regressor=None,
-            base_encoder=MasterExploder):
+    def __init__(self,
+                 base_classifier=None,
+                 base_regressor=None,
+                 base_imputer=IdentityEncoder,
+                 feature_encoder=IdentityEncoder()):
+        """
+        :param base_classifier: the sklearn-like classifier used to impute categorical columns
+        :param base_regressor: the sklearn-like regressor used to impute continous columns
+        :param base_imputer: the imputer used for the first crude run at imputation. It's only
+            necessary when base_classifier or base_regressor can't handle missing values itself
+            - which is the case for RandomForest. MasterExploder is a good default base_imputer
+            in such cases. XGBoost regressors and classifiers don't need any base_imputer.
+        :param feature_encoder: transformer (with .fit, .transform, .inverse_transform methods)
+            that transforms a dataframe to a format where all categorical columns are integers
+            (with missing values denoted by -1) and all continous columns are floats (with missing
+            values denoted by np.NaN)
+        """
+
+        self.base_imputer = base_imputer
+        self.feature_encoder = feature_encoder
         self.base_classifier = base_classifier
-        self.base_encoder = base_encoder
         self.base_regressor = base_regressor
         self.columns = None
         self.col2imputer = {}
@@ -35,10 +48,11 @@ class MLImputer(object):
         self.col2type = {}
 
     def __str__(self):
-        return "MLImputer(%s, %s)" % (self.base_classifier(), self.base_regressor)
+        return "MLImputer(%s, %s, %s, %s)" % (
+            self.base_classifier, self.base_regressor, self.base_imputer, self.feature_encoder)
 
     def fit(self, df, y=False):
-
+        df = self.feature_encoder.fit(df).transform(df)
         self.column_set = set(df.columns)
 
         for col in self.column_set:
@@ -67,11 +81,12 @@ class MLImputer(object):
                     'need at least 1 nonmissing value to train imputer')
 
             imputer = Pipeline(
-                [('encoder', self.base_encoder()), ('imputer', model)])
+                [('encoder', self.base_imputer()), ('imputer', model)])
             self.col2imputer[col] = imputer.fit(X, y)
         return self
 
     def transform(self, df, proba=False):
+        df = self.feature_encoder.transform(df)
         result_dict = {}
         for col, feats in self.col2feats.items():
             column = df[col]
@@ -95,46 +110,4 @@ class MLImputer(object):
 
             result_dict[col] = column_copy
 
-        return pd.DataFrame(result_dict)
-
-
-def test_MLImputer():
-    N = -1
-    NaN = np.NaN
-    S = 1
-
-    datax = pd.DataFrame(dict(
-        a=[1, 1, 1, 1, 0, 0, 0, 1],
-        b=[N, 0, 1, 0, N, 0, 1, 0],
-        c=[1, 0, 0, N, N, 1, 0, 0],
-        d=np.array([NaN, NaN, 1.0, NaN, NaN, 2.14, 0.0, NaN]),
-        e=[3, N, N, 3, N, 3, 3, N]
-    ))
-
-    from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
-
-    result = (
-        MLImputer(RandomForestClassifier, RandomForestRegressor)
-            .fit(datax)
-            .transform(datax, proba=True)
-    )
-
-    assert set(result.columns) == {'a', 'b', 'c', 'd', 'e'}
-    assert result.get('a').dtype == np.int64
-    assert result.get('b').dtype == np.float64
-    assert result.get('c').dtype == np.float64
-    assert result.get('d').dtype == np.float64
-    assert result.get('e').dtype == np.int64
-
-    result = (
-        MLImputer(RandomForestClassifier, RandomForestRegressor)
-            .fit(datax)
-            .transform(datax)
-    )
-
-    assert set(result.columns) == {'a', 'b', 'c', 'd', 'e'}
-    assert result.get('a').dtype == np.int64
-    assert result.get('b').dtype == np.int64
-    assert result.get('c').dtype == np.int64
-    assert result.get('d').dtype == np.float64
-    assert result.get('e').dtype == np.int64
+        return self.feature_encoder.inverse_transform(pd.DataFrame(result_dict))
