@@ -2,7 +2,7 @@ import pandas as pd
 from pandas.util.testing import assert_frame_equal
 import numpy as np
 
-from dstk.imputation.encoders import MasterExploder
+from dstk.imputation.encoders import MasterExploder, StringFeatureEncoder
 
 
 def test_master_exploder_encodes_ints_bools_floats_strings():
@@ -57,3 +57,54 @@ def test_master_exploder_ignores_categorical_columns_when_told():
     ))
 
     assert_frame_equal(actual, expected)
+
+
+def test_StringFeatureEncoder_encodes_string_as_int():
+    encoder = StringFeatureEncoder()
+    df = pd.DataFrame({
+        'a': ['a', 'b', 'b'],
+        'b': [1, 2, 3],
+        'c': [0.4, 0.1, 0.5],
+        'd': ['x', 'y', 'z']
+    })
+
+    expected = pd.DataFrame({
+        'a': [1, 2, 2],
+        'b': [1, 2, 3],
+        'c': [0.4, 0.1, 0.5],
+        'd': [1, 2, 3]
+    })
+    actual = encoder.fit(df).transform(df)
+    assert actual.equals(expected)
+
+
+def test_StringFeatureEncoder_encodes_missing_val_as_minus_one():
+    encoder = StringFeatureEncoder(missing_marker='IM_MISSING')
+    df = pd.DataFrame({
+        'a': ['a', 'b', 'IM_MISSING'],
+        'b': [1, 2, 3],
+        'c': [0.4, 0.1, 0.5],
+        'd': ['IM_MISSING', 'IM_MISSING', 'z']
+    })
+
+    expected = pd.DataFrame({
+        'a': [1, 2, -1],
+        'b': [1, 2, 3],
+        'c': [0.4, 0.1, 0.5],
+        'd': [-1, -1, 1]
+    })
+    actual = encoder.fit(df).transform(df)
+    assert actual.equals(expected)
+
+
+def test_StringFeatureEncoder_decodes_encoded():
+    encoder = StringFeatureEncoder(missing_marker='IM_MISSING')
+    df = pd.DataFrame({
+        'a': ['a', 'b', 'IM_MISSING'],
+        'b': [1, 2, 3],
+        'c': [0.4, 0.1, 0.5],
+        'd': ['IM_MISSING', 'IM_MISSING', 'z']
+    })
+
+    encoded = encoder.fit(df).transform(df)
+    assert df.equals(encoder.inverse_transform(encoded))
