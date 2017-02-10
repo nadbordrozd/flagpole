@@ -34,6 +34,6 @@ def wet_dataset():
         'sprinkler': [0, 1, 1, 0, 1, 0, 1, -1],
         'wet_sidewalk': [0, 1, 1, 1, 1, 1, -1, 0],
         'some_numeric': [1.1, np.NaN, 0.2, -0.4, 0.1, 0.2, 0.0, 3.9],
-        'some_string': ['A', 'A', 'A', 'A', 'A', 'A', 'A', 'UNKNOWN']
+        'some_string': ['B', 'A', 'A', 'A', 'A', 'A', 'A', 'UNKNOWN']
     })
     return data
