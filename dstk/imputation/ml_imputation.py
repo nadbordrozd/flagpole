@@ -42,8 +42,8 @@ class MLImputer(object):
         self.feature_encoder = feature_encoder
         self.base_classifier = base_classifier
         self.base_regressor = base_regressor
-        self.columns = None
         self.col2imputer = {}
+        self.column_set = {}
         self.col2feats = {}
         self.col2type = {}
 
@@ -98,7 +98,7 @@ class MLImputer(object):
                     predictions = self.col2imputer[col] \
                                       .predict_proba(
                         df.get(feats)[missing]
-                            .reset_index(drop=True))[:, 1]
+                        .reset_index(drop=True))[:, 1]
                     column_copy = column_copy + 0.0
                 else:
                     predictions = self.col2imputer[col] \
@@ -110,4 +110,5 @@ class MLImputer(object):
 
             result_dict[col] = column_copy
 
-        return self.feature_encoder.inverse_transform(pd.DataFrame(result_dict))
+        return self.feature_encoder.inverse_transform(
+            pd.DataFrame(result_dict))
