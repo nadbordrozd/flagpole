@@ -11,7 +11,7 @@ def DefaultImputer(missing_string_marker='UNKNOWN'):
     return MLImputer(
         base_classifier=XGBClassifier,
         base_regressor=XGBRegressor,
-        feature_encoder=StringFeatureEncoder(ml_imputation=missing_string_marker))
+        feature_encoder=StringFeatureEncoder(missing_marker=missing_string_marker))
 
 
 def sample_dataset():
