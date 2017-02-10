@@ -16,15 +16,15 @@ print data
 prints 
 
 ```
-   rain  some_numeric  sprinkler  wet_sidewalk
-0     0           1.1          0             0
-1     0           NaN          1             1
-2     1           0.2          1             1
-3     1          -0.4          0             1
-4     1           0.1          1             1
-5    -1           0.2          0             1
-6     0           0.0          1            -1
-7    -1           3.9         -1             0
+   rain  some_numeric some_string  sprinkler  wet_sidewalk
+0     0           1.1           B          0             0
+1     0           NaN           A          1             1
+2     1           0.2           A          1             1
+3     1          -0.4           A          0             1
+4     1           0.1           A          1             1
+5    -1           0.2           A          0             1
+6     0           0.0           A          1            -1
+7    -1           3.9     UNKNOWN         -1             0
 ```
 
 In this example 'sprinkler' and 'rain' variables are meant to be independent random variables, while 'wet_sidewalk' is true iff 'rain' OR 'sprinkler' is true. 'some_numeric' is just a nonsense numeric column thrown in there for completeness.
@@ -35,8 +35,8 @@ By convention we use `-1` to denote a missing boolean or categorical value and `
 Now let's do some imputation:
 ```python
 from dstk.imputation import DefaultImputer
-
-imputer = DefaultImputer()
+ 
+imputer = DefaultImputer(missing_string_marker='UNKNOWN')  # treat 'UNKNOWN' as missing value
 filled_in = imputer.fit(data).transform(data)
 
 print filled_in
@@ -44,25 +44,33 @@ print filled_in
 prints
 
 ```   
-   rain  some_numeric  sprinkler  wet_sidewalk
-0     0        1.1000          0             0
-1     0        0.1475          1             1
-2     1        0.2000          1             1
-3     1       -0.4000          0             1
-4     1        0.1000          1             1
-5     1        0.2000          0             1
-6     0        0.0000          1             1
-7     0        3.9000          0             0
+   rain  some_numeric some_string  sprinkler  wet_sidewalk
+0     0       1.10000           B          0             0
+1     0       0.00611           A          1             1
+2     1       0.20000           A          1             1
+3     1      -0.40000           A          0             1
+4     1       0.10000           A          1             1
+5     0       0.20000           A          0             1
+6     0       0.00000           A          1             1
+7     0       3.90000           A          1             0
 ```
 
 This default imputer uses XGBoost regressors and classifiers under the hood that are trained to fill in one column at a time. It should be sufficient in most applications. It is possible to replace Random Forests with any other sklearn-compatible algorithm - for example SVM - like this:
 
 ```python
-from dstk.imputation import MLImputer
+from dstk.imputation import MLImputer, MasterExploder, StringFeatureEncoder
 from sklearn.svm import SVC, SVR
 
-svm_imputer = MLImputer(base_classifier=SVR, base_regressor=SVC)
+svm_imputer = MLImputer(
+    base_classifier=SVR, 
+    base_regressor=SVC, 
+    base_imputer=MasterExploder, 
+    feature_encoder=StringFeatureEncoder(missing_marker='UNKNOWN'))
 ```
+
+Here `MasterExploder` is a simple imputer that imputes missing values with median. It is necessary
+as a preprocessing step because SVM can't handle missing features. The default imputer doesn't need
+this intermediate step because XGBoost directly deals with missing features.
 
 ### Bayes-Net imputation
 To do imputation the bayesian way one needs to create an imputer that inherits from `dstk.imputation.BayesNetImputer` and override the `construct_net` method.
@@ -119,14 +127,14 @@ print filled_data
 ```
 prints
 ```
-    rain  some_numeric  sprinkler  wet_sidewalk
-0     0           1.1          0             0
-1     0           NaN          1             1
-2     1           0.2          1             1
-3     1          -0.4          0             1
-4     1           0.1          1             1
-5     1           0.2          0             1
-6     0           0.0          1             0
-7     0           3.9          0             0
+    rain  some_numeric some_string  sprinkler  wet_sidewalk
+0     0           1.1           B          0             0
+1     0           NaN           A          1             1
+2     1           0.2           A          1             1
+3     1          -0.4           A          0             1
+4     1           0.1           A          1             1
+5     1           0.2           A          0             1
+6     0           0.0           A          1             1
+7     1           3.9     UNKNOWN          1             0
 ```
 The fields that are not part of the network are simply passed unchanged - hence the NaN in 'some_numeric'. 
