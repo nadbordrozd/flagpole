@@ -6,14 +6,17 @@ from encoders import MasterExploder, StringFeatureEncoder
 from bayes_imputation import BayesNetImputer
 from utils import mask_missing
 
-def DefaultImputer():
-    return MLImputer(base_classifier=XGBClassifier, base_regressor=XGBRegressor)
+
+def DefaultImputer(missing_string_marker='UNKNOWN'):
+    return MLImputer(
+        base_classifier=XGBClassifier,
+        base_regressor=XGBRegressor,
+        feature_encoder=StringFeatureEncoder(ml_imputation=missing_string_marker))
 
 
 def sample_dataset():
     N = -1
     NaN = np.NaN
-    S = 1
 
     datax = pd.DataFrame(dict(
         a=[1, 1, 1, 1, 0, 0, 0, 1],
@@ -27,9 +30,10 @@ def sample_dataset():
 
 def wet_dataset():
     data = pd.DataFrame({
-        'rain':         [0, 0, 1, 1, 1, -1, 0, -1],
-        'sprinkler':    [0, 1, 1, 0, 1, 0, 1, -1],
+        'rain': [0, 0, 1, 1, 1, -1, 0, -1],
+        'sprinkler': [0, 1, 1, 0, 1, 0, 1, -1],
         'wet_sidewalk': [0, 1, 1, 1, 1, 1, -1, 0],
-        'some_numeric': [1.1, np.NaN, 0.2, -0.4, 0.1, 0.2, 0.0, 3.9]
+        'some_numeric': [1.1, np.NaN, 0.2, -0.4, 0.1, 0.2, 0.0, 3.9],
+        'some_string': ['A', 'A', 'A', 'A', 'A', 'A', 'A', 'UNKNOWN']
     })
     return data
