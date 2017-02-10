@@ -18,7 +18,6 @@ import numpy as np
 from sklearn.preprocessing import Imputer, LabelEncoder
 
 
-
 class MissingNumericEncoder(object):
     """transformer that takes a numeric dataframe column (with missing values)
     and encodes it as 2 columns - first numeric with missing values replaced by
@@ -122,11 +121,12 @@ class MasterExploder(object):
         self.columns = df.columns
         self.column2encoder = {
             column_name:
-                MissingNumericEncoder(column_name, strategy=self.num_strategy).fit(df)
+                MissingNumericEncoder(
+                    column_name, strategy=self.num_strategy).fit(df)
                 if df.get(column_name).dtype == np.dtype('float64')
                 else self.cat_encoder(column_name).fit(df)
             for column_name in self.columns
-            }
+        }
         return self
 
     def transform(self, df):
@@ -134,3 +134,66 @@ class MasterExploder(object):
                           for col in self.columns], axis=1)
 
 
+class StringFeatureEncoder(object):
+    """StringFeatureEncoder takes a dataframe and encodes every categorical ('object') column
+    into an integer column. A spcified string 'missing_marker' gets encoded as -1. inverse_transform
+    reverses the transformation.
+    """
+    def __init__(self, missing_marker='UNKNOWN'):
+        self.missing_replacement = -1
+        self.missing_marker = missing_marker
+        self.encoders = {}
+
+    def fit(self, X, y=None):
+        """ takes a pandas dataframe and fits the encoder on the string columns
+        :param X: pandas dataframe
+        :param y: unused parameter - there for consistency
+        :return: self
+        """
+        for c in X.columns:
+            col = X[c]
+            if col.dtype != 'object':
+                continue
+            self.encoders[c] = LabelEncoder().fit(
+                list(col) + [self.missing_marker])
+        return self
+
+    def transform(self, X):
+        """transforms dataframe by encoding string columns into integer columns
+
+        :param X: pandas dataframe
+        :return: similar dataframe where all string columns are replaced by integers
+            and the string denoting missing value is transformed into -1
+        """
+        new_df = pd.DataFrame()
+        for c in X.columns:
+            col = X[c]
+            if c in self.encoders:
+                encoder = self.encoders[c]
+                new_df[c] = encoder.transform(col)
+                missing_code = encoder.transform([self.missing_marker])[0]
+                replacement = self.missing_replacement
+                new_df[c] = new_df[c].map(
+                    lambda x: replacement if x == missing_code else x)
+            else:
+                new_df[c] = X[c]
+        return new_df
+
+    def inverse_transform(self, X):
+        """undoes the changes done by 'transform'
+
+        :param X: a pandas dataframe with integer columns - like one would get with 'transform'
+        :return: pandas dataframe with int columns decoded to string - like in the original
+            dataframe on which this encoder was fitted
+        """
+        new_df = pd.DataFrame()
+        for c in X.columns:
+            if c in self.encoders:
+                encoder = self.encoders[c]
+                missing_code = encoder.transform([self.missing_marker])[0]
+                col = X[c].map(lambda x: missing_code if x ==
+                               self.missing_replacement else x)
+                new_df[c] = encoder.inverse_transform(col)
+            else:
+                new_df[c] = X[c]
+        return new_df
