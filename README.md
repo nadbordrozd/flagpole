@@ -29,7 +29,11 @@ prints
 
 In this example 'sprinkler' and 'rain' variables are meant to be independent random variables, while 'wet_sidewalk' is true iff 'rain' OR 'sprinkler' is true. 'some_numeric' and 'some_string' are just nonsense numeric and string columns thrown in there for completeness.
 
-By convention we use `-1` to denote a missing boolean or categorical value and `np.NaN` for missing numeric values.
+All the imputers expect data in a the form of a pandas DataFrame, where:
+
+- numeric columns are treated as continuous variables and can have missing values denoted `np.NaN`
+- iteger columns are treated as categorical variables and must have values from `-1` to `n - 1`, where `n` is the number of classes. `-1` is used to denote a missing value.
+- string  columns are treated as categorical. Missing values can be denoted by any string specified by user.
 
 ### ML-based imputation
 Now let's do some imputation:
