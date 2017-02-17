@@ -27,7 +27,7 @@ prints
 7    -1           3.9     UNKNOWN         -1             0
 ```
 
-In this example 'sprinkler' and 'rain' variables are meant to be independent random variables, while 'wet_sidewalk' is true iff 'rain' OR 'sprinkler' is true. 'some_numeric' is just a nonsense numeric column thrown in there for completeness.
+In this example 'sprinkler' and 'rain' variables are meant to be independent random variables, while 'wet_sidewalk' is true iff 'rain' OR 'sprinkler' is true. 'some_numeric' and 'some_string' are just nonsense numeric and string columns thrown in there for completeness.
 
 By convention we use `-1` to denote a missing boolean or categorical value and `np.NaN` for missing numeric values.
 
@@ -55,7 +55,7 @@ prints
 7     0       3.90000           A          1             0
 ```
 
-This default imputer uses XGBoost regressors and classifiers under the hood that are trained to fill in one column at a time. It should be sufficient in most applications. It is possible to replace Random Forests with any other sklearn-compatible algorithm - for example SVM - like this:
+This default imputer uses XGBoost regressors and classifiers under the hood that are trained to fill in one column at a time. It should be sufficient in most applications. It is possible to replace XGBoost with any other sklearn-compatible algorithm - for example SVM - like this:
 
 ```python
 from dstk.imputation import MLImputer, MasterExploder, StringFeatureEncoder
