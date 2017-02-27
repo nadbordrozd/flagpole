@@ -51,6 +51,9 @@ class MissingNumericEncoder(object):
             (self.column_name + '_missing'): missing.get(self.column_name)
         })
 
+    def __str__(self):
+        return "MissingNumericEncoder(column_name='%s')" % self.column_name
+
 
 class MissingCategoricalEncoder(object):
     """transformer that encodes a single integer or string column as integer
@@ -88,6 +91,9 @@ class MissingCategoricalEncoder(object):
             self.column_name: self.label_encoder.transform(df.get(self.column_name))
         })
 
+    def __str__(self):
+        return "CategoricalFeatureEncoder(column_name='%s')" % self.column_name
+
 
 class IdentityEncoder(object):
     """same interface as MissingCategoricalEncoder but doesn't do anything"""
@@ -106,6 +112,9 @@ class IdentityEncoder(object):
 
     def inverse_transform(self, df):
         return df
+
+    def __str__(self):
+        return "IdentityEncoder"
 
 
 class MasterExploder(object):
@@ -138,6 +147,9 @@ class MasterExploder(object):
     def transform(self, df):
         return pd.concat([self.column2encoder[col].transform(df)
                           for col in self.columns], axis=1)
+
+    def __str__(self):
+        return "MasterExploder"
 
 
 class StringFeatureEncoder(object):
@@ -203,3 +215,6 @@ class StringFeatureEncoder(object):
             else:
                 new_df[c] = X[c]
         return new_df
+
+    def __str__(self):
+        return "StringFeatureEncoder(missing_marker='%s')" % self.missing_marker

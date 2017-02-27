@@ -50,7 +50,7 @@ class MLImputer(object):
 
     def __str__(self):
         return "MLImputer(%s, %s, %s, %s)" % (
-            self.base_classifier, self.base_regressor, self.base_imputer, self.feature_encoder)
+            self.base_classifier(), self.base_regressor(), self.base_imputer(), self.feature_encoder)
 
     def fit(self, df, y=False):
         df = self.feature_encoder.fit(df).transform(df)
@@ -69,8 +69,8 @@ class MLImputer(object):
             else:
                 self.col2type[col] = 'integer'
 
-            logger.info("fitting %s on %s column %s. %s column out of %s"
-                        % (self, self.col2type[col], col, i + 1, len(self.column_set)))
+            logger.info("fitting MLImputer on %s column %s. %s column out of %s"
+                        % (self.col2type[col], col, i + 1, len(self.column_set)))
 
             feats = self.col2feats[col]
             if np.issubdtype(column.dtype, np.floating):
