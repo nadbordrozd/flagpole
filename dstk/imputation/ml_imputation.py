@@ -115,5 +115,8 @@ class MLImputer(object):
 
             result_dict[col] = column_copy
 
-        return self.feature_encoder.inverse_transform(
+        transformed = self.feature_encoder.inverse_transform(
             pd.DataFrame(result_dict))
+        transformed.index = df.index.copy()
+
+        return transformed

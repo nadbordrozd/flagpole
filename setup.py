@@ -9,7 +9,7 @@ LONG_DESCRIPTION = open("README.md")
 
 
 setup(name='aimia-dstk',
-   version='0.122',
+   version='0.123',
    description='buncha utils for data science',
    long_description=LONG_DESCRIPTION,
    author='Nadbor Drozd',
