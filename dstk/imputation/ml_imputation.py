@@ -3,7 +3,8 @@ import pandas as pd
 import numpy as np
 
 from .encoders import IdentityEncoder
-from utils import missing_mask
+from .utils import missing_mask
+from ..utils import logger
 
 
 class MLImputer(object):
@@ -59,7 +60,7 @@ class MLImputer(object):
             other_cols = sorted(self.column_set.difference({col}))
             self.col2feats[col] = other_cols
 
-        for col in self.column_set:
+        for i, col in enumerate(self.column_set):
             column = df.get(col)
             if np.issubdtype(column.dtype, np.floating):
                 self.col2type[col] = 'numeric'
@@ -67,6 +68,9 @@ class MLImputer(object):
                 self.col2type[col] = 'boolean'
             else:
                 self.col2type[col] = 'integer'
+
+            logger.info("fitting %s on %s column %s. %s column out of %s"
+                        % (self, self.col2type[col], col, i + 1, len(self.column_set)))
 
             feats = self.col2feats[col]
             if np.issubdtype(column.dtype, np.floating):
@@ -83,6 +87,7 @@ class MLImputer(object):
             imputer = Pipeline(
                 [('encoder', self.base_imputer()), ('imputer', model)])
             self.col2imputer[col] = imputer.fit(X, y)
+            logger.info('column imputer fitted on %s column' % col)
         return self
 
     def transform(self, df, proba=False):
