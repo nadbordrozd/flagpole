@@ -7,11 +7,12 @@ from bayes_imputation import BayesNetImputer
 from utils import mask_missing
 
 
-def DefaultImputer(missing_string_marker='UNKNOWN'):
+def DefaultImputer(missing_string_marker='UNKNOWN', missing_features=None):
     return MLImputer(
         base_classifier=XGBClassifier,
         base_regressor=XGBRegressor,
-        feature_encoder=StringFeatureEncoder(missing_marker=missing_string_marker))
+        feature_encoder=StringFeatureEncoder(missing_marker=missing_string_marker),
+        missing_features=missing_features)
 
 
 def sample_dataset():

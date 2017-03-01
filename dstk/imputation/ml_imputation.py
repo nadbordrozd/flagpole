@@ -25,7 +25,8 @@ class MLImputer(object):
                  base_classifier=None,
                  base_regressor=None,
                  base_imputer=IdentityEncoder,
-                 feature_encoder=IdentityEncoder()):
+                 feature_encoder=IdentityEncoder(),
+                 missing_features=None):
         """
         :param base_classifier: the sklearn-like classifier used to impute categorical columns
         :param base_regressor: the sklearn-like regressor used to impute continous columns
@@ -37,6 +38,8 @@ class MLImputer(object):
             that transforms a dataframe to a format where all categorical columns are integers
             (with missing values denoted by -1) and all continous columns are floats (with missing
             values denoted by np.NaN)
+        :param missing_features: list of features the Imputer will train to impute. By default it
+            trains to impute every column.
         """
 
         self.base_imputer = base_imputer
@@ -47,6 +50,7 @@ class MLImputer(object):
         self.column_set = {}
         self.col2feats = {}
         self.col2type = {}
+        self.missing_features = missing_features
 
     def __str__(self):
         return "MLImputer(%s, %s, %s, %s)" % (
@@ -55,12 +59,14 @@ class MLImputer(object):
     def fit(self, df, y=False):
         df = self.feature_encoder.fit(df).transform(df)
         self.column_set = set(df.columns)
+        if self.missing_features is None:
+            self.missing_features = self.column_set
 
-        for col in self.column_set:
+        for col in self.missing_features:
             other_cols = sorted(self.column_set.difference({col}))
             self.col2feats[col] = other_cols
 
-        for i, col in enumerate(self.column_set):
+        for i, col in enumerate(self.missing_features):
             column = df.get(col)
             if np.issubdtype(column.dtype, np.floating):
                 self.col2type[col] = 'numeric'
@@ -93,25 +99,26 @@ class MLImputer(object):
     def transform(self, df, proba=False):
         df = self.feature_encoder.transform(df)
         result_dict = {}
-        for col, feats in self.col2feats.items():
+        for col in self.column_set:
             column = df[col]
             column_copy = np.copy(column)
+            if col in self.missing_features:
+                feats = self.col2feats[col]
+                missing = missing_mask(column)
+                if missing.any():
+                    if proba and self.col2type[col] == 'boolean':
+                        predictions = (
+                            self.col2imputer[col]
+                            .predict_proba(df.get(feats)[missing].reset_index(drop=True))[:, 1]
+                        )
+                        column_copy += 0.0
+                    else:
+                        predictions = (
+                            self.col2imputer[col]
+                            .predict(df.get(feats)[missing].reset_index(drop=True))
+                        )
 
-            missing = missing_mask(column)
-            if missing.any():
-                if proba and self.col2type[col] == 'boolean':
-                    predictions = self.col2imputer[col] \
-                                      .predict_proba(
-                        df.get(feats)[missing]
-                        .reset_index(drop=True))[:, 1]
-                    column_copy = column_copy + 0.0
-                else:
-                    predictions = self.col2imputer[col] \
-                        .predict(
-                        df.get(feats)[missing]
-                            .reset_index(drop=True))
-
-                column_copy[np.where(missing_mask(column))] = predictions
+                    column_copy[np.where(missing_mask(column))] = predictions
 
             result_dict[col] = column_copy
 
