@@ -127,3 +127,6 @@ class MLImputer(object):
         transformed.index = df.index.copy()
 
         return transformed
+
+    def fit_transform(self, X, y=None):
+        return self.fit(X).transform(X)
