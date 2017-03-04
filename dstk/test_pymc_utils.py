@@ -1,7 +1,11 @@
 from dstk.pymc_utils import make_bernoulli, make_categorical,\
-    cartesian_bernoulli_child, COEFFS_PREFIX, sample_coeffs
+    cartesian_bernoulli_child, cartesian_categorical_child, COEFFS_PREFIX, sample_coeffs
 import pymc
 import numpy as np
+
+
+def pad(s, width):
+    return s + ' ' * (width - len(s))
 
 
 def test_make_bernoulli_returns_variable_with_beta_parent():
@@ -25,8 +29,43 @@ def test_make_categorical_returns_variable_with_dirichlet_parent():
     assert isinstance(parent, pymc.distributions.Dirichlet)
 
 
-def pad(s, width):
-    return s + ' ' * (width - len(s))
+def test_cartesian_bernoulli_child_creates_correctly_named_coefficients():
+    mum = make_bernoulli('mum', N=1)
+    dad = make_bernoulli('dad', N=1)
+    child, coeffs = cartesian_bernoulli_child('child', [mum, dad], N=1, return_coeffs=True)
+    coeff_names = {str(coeff) for coeff in coeffs}
+    assert coeff_names == {
+        'CF: p(child | mum=0 dad=0)',
+        'CF: p(child | mum=1 dad=1)',
+        'CF: p(child | mum=1 dad=0)',
+        'CF: p(child | mum=0 dad=1)',
+        'p(child)'
+    }
+
+    single_parent = make_bernoulli('single_parent', N=1)
+    child, coeffs = cartesian_bernoulli_child('child', [single_parent], N=1, return_coeffs=True)
+    coeff_names = {str(coeff) for coeff in coeffs}
+    assert coeff_names == {
+        'p(child)',
+        'CF: p(child | single_parent=0)',
+        'CF: p(child | single_parent=1)'
+    }
+
+
+def test_cartesian_categorical_child_creates_correctly_named_coefficients():
+    mum = make_bernoulli('mum', N=1)
+    dad = make_bernoulli('dad', N=1)
+    child, coeffs = cartesian_categorical_child(
+        'child', [mum, dad], levels=4, N=1, return_coeffs=True)
+
+    coeff_names = {str(coeff) for coeff in coeffs}
+    assert coeff_names == {
+        'CF: p(child | mum=0 dad=0)',
+        'CF: p(child | mum=1 dad=1)',
+        'CF: p(child | mum=1 dad=0)',
+        'CF: p(child | mum=0 dad=1)',
+        'p(child)'
+    }
 
 
 def test_cartesian_bernoulli_child():
@@ -75,22 +114,22 @@ def test_cartesian_bernoulli_child():
 
 def test_cartesian_bernoulli_child_of_categorical_parent():
     coeffs = {
-        'CF: p(feeling_sick)': 0.992,
+        'CF: p(feeling_sick)': 0.55,
         'CF: p(day_of_week)': [0.013, 0.626, 0.039, 0.108, 0.134, 0.019],
-        'CF: p(staying_home | (5, 1))': 0.240,
-        'CF: p(staying_home | (3, 1))': 0.467,
-        'CF: p(staying_home | (4, 1))': 0.603,
-        'CF: p(staying_home | (0, 0))': 0.974,
-        'CF: p(staying_home | (6, 1))': 0.331,
-        'CF: p(staying_home | (6, 0))': 0.009,
-        'CF: p(staying_home | (2, 1))': 0.317,
-        'CF: p(staying_home | (0, 1))': 0.900,
-        'CF: p(staying_home | (2, 0))': 0.651,
-        'CF: p(staying_home | (1, 0))': 0.603,
-        'CF: p(staying_home | (1, 1))': 0.954,
-        'CF: p(staying_home | (3, 0))': 0.856,
-        'CF: p(staying_home | (5, 0))': 0.606,
-        'CF: p(staying_home | (4, 0))': 0.828
+        'CF: p(staying_home | day_of_week=5 feeling_sick=1)': 0.240,
+        'CF: p(staying_home | day_of_week=3 feeling_sick=1)': 0.467,
+        'CF: p(staying_home | day_of_week=4 feeling_sick=1)': 0.603,
+        'CF: p(staying_home | day_of_week=0 feeling_sick=0)': 0.974,
+        'CF: p(staying_home | day_of_week=6 feeling_sick=1)': 0.331,
+        'CF: p(staying_home | day_of_week=6 feeling_sick=0)': 0.009,
+        'CF: p(staying_home | day_of_week=2 feeling_sick=1)': 0.317,
+        'CF: p(staying_home | day_of_week=0 feeling_sick=1)': 0.900,
+        'CF: p(staying_home | day_of_week=2 feeling_sick=0)': 0.651,
+        'CF: p(staying_home | day_of_week=1 feeling_sick=0)': 0.603,
+        'CF: p(staying_home | day_of_week=1 feeling_sick=1)': 0.954,
+        'CF: p(staying_home | day_of_week=3 feeling_sick=0)': 0.856,
+        'CF: p(staying_home | day_of_week=5 feeling_sick=0)': 0.606,
+        'CF: p(staying_home | day_of_week=4 feeling_sick=0)': 0.828
     }
     np.random.seed = 1
     # define the model with fixed *coefficients*
@@ -120,6 +159,8 @@ def test_cartesian_bernoulli_child_of_categorical_parent():
     sampler = pymc.MCMC(model)
     sampler.sample(iter=500, burn=300)
 
-    cname = 'CF: p(staying_home | (1, 0))'
+    cname = 'CF: p(staying_home | day_of_week=1 feeling_sick=0)'
     print cname
     assert np.isclose(coeffs[cname], sampler.trace(cname)[:].mean(), atol=0.3)
+    for c in coeffs:
+        print c, coeffs[c], sampler.trace(c)[:].mean()

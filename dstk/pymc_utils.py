@@ -95,7 +95,8 @@ def cartesian_bernoulli_child(
     coeffs = []
     for i, parent_vals in enumerate(product(*ranges)):
         parents2index[parent_vals] = i
-        coeff_name = COEFFS_PREFIX + 'p(%s | %s)' % (name, parent_vals)
+        parents_repr = ' '.join('%s=%s' % (parent, v) for parent, v in zip(parents, parent_vals))
+        coeff_name = COEFFS_PREFIX + 'p(%s | %s)' % (name, parents_repr)
         coeff = fixed.get(coeff_name, pymc.Uniform(coeff_name, 0, 1))
         coeffs.append(coeff)
 
@@ -131,7 +132,8 @@ def cartesian_categorical_child(
     coeffs = []
     for i, parent_vals in enumerate(product(*ranges)):
         parents2index[parent_vals] = i
-        coeff_name = COEFFS_PREFIX + 'p(%s=%s | %s)' % (name, i, parent_vals)
+        parents_repr = ' '.join('%s=%s' % (parent, v) for parent, v in zip(parents, parent_vals))
+        coeff_name = COEFFS_PREFIX + 'p(%s | %s)' % (name, parents_repr)
         coeff = fixed.get(coeff_name, pymc.Dirichlet(
             coeff_name, theta=[1] * levels))
         coeffs.append(coeff)
