@@ -89,36 +89,26 @@ from dstk.pymc_utils import make_bernoulli, cartesian_child
 class RSWImputer(BayesNetImputer):
 
     def construct_net(self, df):
-        # pymc requires that missing data is represented by masked numpy arrays        
-        # mask_missing converts a list of values with -1 or np.NaN denoting missing
-        # into a masked array
-        rain_data = mask_missing(df.rain)
-        sprinkler_data = mask_missing(df.sprinkler)
-        sidewalk_data = mask_missing(df.wet_sidewalk)
-
         # define the network
         # make_bernoulli creates a binary (observed in this case) random variable 'rain'
         # and also implicitly creates a parent for it 'p(rain)' - which is an unobserved
         # random variable with a uniform prior on the interval [0, 1]
-        rain = make_bernoulli('rain', value=rain_data)
+        rain = make_bernoulli('rain', value=df.rain)
         # ditto for 'sprinkler'
-        sprinkler = make_bernoulli('sprinkler', value=sprinkler_data)
+        sprinkler = make_bernoulli('sprinkler', value=df.sprinkler)
         # cartesian child creates a child variable of 'sprinkler' and 'rain' with 
         # a conditional probability distribution given its parents. The child 'wet_sidewalk'
         # has a different probability for every combination of values of parents 
         # (which there are 4 of in this case). For every combination of parent values an
         # independent, unobserved random variable is created:
-        # p(wet_sidewalk=1 | rain=0, sprinkler=0)
-        # p(wet_sidewalk=1 | rain=0, sprinkler=1)
-        # p(wet_sidewalk=1 | rain=1, sprinkler=0)
-        # p(wet_sidewalk=1 | rain=1, sprinkler=1)
+        # p(wet_sidewalk=1 | rain=0 sprinkler=0)
+        # p(wet_sidewalk=1 | rain=0 sprinkler=1)
+        # p(wet_sidewalk=1 | rain=1 sprinkler=0)
+        # p(wet_sidewalk=1 | rain=1 sprinkler=1)
         sidewalk = cartesian_child('wet_sidewalk', parents=[rain, sprinkler],
-                                   value=sidewalk_data)
+                                   value=df.wet_sidewalk)
     
-        # pymc boilerplate. sorry :(
-        model = pymc.Model([rain, sprinkler, sidewalk])
-        sampler = pymc.MCMC(model)
-        return sampler
+        return pymc.Model([rain, sprinkler, sidewalk])
 ```
 
 and then use it the same way as the ML imputer:

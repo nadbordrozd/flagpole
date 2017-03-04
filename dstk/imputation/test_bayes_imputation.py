@@ -10,14 +10,10 @@ class RSWImputer(BayesNetImputer):
     """the famous Rain-Sprinkler-Wet bayesian network"""
 
     def construct_net(self, df):
-        rain_data = mask_missing(df.rain)
-        sprinkler_data = mask_missing(df.sprinkler)
-        sidewalk_data = mask_missing(df.wet_sidewalk)
-
-        rain = make_bernoulli('rain', value=rain_data)
-        sprinkler = make_bernoulli('sprinkler', value=sprinkler_data)
+        rain = make_bernoulli('rain', value=df.rain)
+        sprinkler = make_bernoulli('sprinkler', value=df.sprinkler)
         sidewalk = cartesian_child('wet_sidewalk', parents=[rain, sprinkler],
-                                   value=sidewalk_data)
+                                   value=df.wet_sidewalk)
 
         model = pymc.Model([rain, sprinkler, sidewalk])
         return model

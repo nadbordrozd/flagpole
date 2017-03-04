@@ -1,6 +1,7 @@
 import pymc
 import numpy as np
 from itertools import product
+from dstk.imputation.utils import mask_missing
 
 COEFFS_PREFIX = 'CF: '
 
@@ -33,6 +34,9 @@ def make_categorical(name, levels, value=None, N=None,
     """
     if value is None and N is None:
         raise ValueError('either "value" or "N" must be specified')
+    if value is not None:
+        value = mask_missing(value)
+
     N = N or len(value)
     coeff_name = COEFFS_PREFIX + 'p(%s)' % name
     if coeff_name in fixed:
@@ -69,6 +73,8 @@ def make_bernoulli(name, value=None, N=None, return_coeffs=False, fixed={}):
     """
     if value is None and N is None:
         raise ValueError('either "value" or "N" must be specified')
+    if value is not None:
+        value = mask_missing(value)
 
     parent_name = COEFFS_PREFIX + 'p(%s)' % name
     parent = fixed.get(parent_name, pymc.Beta(parent_name, 1, 1))
@@ -89,6 +95,8 @@ def cartesian_bernoulli_child(
         name, parents, value=None, N=None, return_coeffs=False, fixed={}):
     if value is None and N is None:
         raise ValueError('either "value" or "N" must be specified')
+    if value is not None:
+        value = mask_missing(value)
 
     ranges = [range(get_levels_count(p)) for p in parents]
     parents2index = {}
@@ -126,6 +134,8 @@ def cartesian_categorical_child(
         name, parents, levels, value=None, N=None, return_coeffs=False, fixed={}):
     if value is None and N is None:
         raise ValueError('either "value" or "N" must be specified')
+    if value is not None:
+        value = mask_missing(value)
 
     ranges = [range(get_levels_count(p)) for p in parents]
     parents2index = {}
@@ -215,6 +225,8 @@ def _linearised_many(parents, child_name, return_coeffs=False, fixed={}):
 
 def logistic_bernoulli_child(name, parents, value=None,
                              N=None, return_coeffs=False, fixed={}):
+    if value is not None:
+        value = mask_missing(value)
     N = N or len(value)
     theta, all_coeffs = _linearised_many(parents, name, True, fixed)
 
@@ -233,6 +245,8 @@ def logistic_bernoulli_child(name, parents, value=None,
 
 def logistic_categorical_child(name, parents, levels, value=None,
                                N=None, return_coeffs=False, fixed={}):
+    if value is not None:
+        value = mask_missing(value)
     N = N or len(value)
     all_coeffs, one_v_all = [], []
     for i in range(levels):

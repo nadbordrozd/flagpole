@@ -46,6 +46,7 @@ def missing_mask(array):
 
 
 def mask_missing(values, fill_value=0):
+    values = np.array(values)
     mask = missing_mask(values)
     new_values = np.array([v if not m else fill_value
                            for v, m in zip(values, mask)])
