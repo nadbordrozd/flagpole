@@ -10,8 +10,9 @@ that would be usable right away for any future application. What it does provide
 
 import pandas as pd
 import numpy as np
+import pymc
 
-from dstk.imputation.utils import is_floaty, mask_missing, missing_indices
+from dstk.imputation.utils import is_floaty, missing_indices
 
 
 def predict(sampler, data):
@@ -42,75 +43,66 @@ def predict(sampler, data):
 
 
 class BayesNetImputer(object):
-    """
-    superclass of bayes-net based models that for transforming data
 
-    the interface is the same as all the other imputers:
-    data_with_missing_filled_in = imputer.fit(data).predict(data)
+    def __init__(self, method='MAP', iter=500, burn=300, thin=2):
+        """superclass of bayes-net-based models for imputing missing data
 
-    As model fitting and prediction are both done in one go - sampling, it is not possible to fit
-    the model on one dataset and predict for another. This is why only the 'transform' method
-    of this class does any useful work while 'fit' is empty. 'fit' is kept here for consistency with
-    other types of imputers.
-    """
+        To use this imputer, it should be subclassed and the methods 'construct_net' should be
+        implemented - see examples in unit tests.
 
-    def __init__(self, iter=500, burn=300, thin=2):
+        The interface is the same as for other imputers in this package:
+
+        data_with_missing_values_filled_in = imputer.fit(data).transform(data)
+
+        This model fits and transforms data all in one go - inside the 'transform' function,
+        therefore 'fit' is unnecessary and only there for consistency with other models.
+
+        Two imputation methods are supported:
+        - 'MCMC' - samples a fixed number of times from the posterior and returns mean (for numeric)
+            or mode (for categorical) for each missing value
+        - 'MAP' - directly finds the value of each missing variable tha maximizes posterior
+            probability
+
+        In theory these methods should be equivalent for categorical variables, but MAP should be
+        much faster.
+
+        :param method: either 'MAP' or 'MCMC', defaults to 'MAP'. If 'MAP' then, there will be no
+            sampling, just optimisation and 'iter', 'burn', 'thin' parameters will have no effect.
+        :param iter: total number iteratoins (only for 'MCMC' method)
+        :param burn: number of initial iterations to discard (only for 'MCMC')
+        :param thin: discard all except every nth iteration where n=thin
+        """
+        if method not in ['MAP', 'MCMC']:
+            raise ValueError("only 'MAP' and 'MCMC' methods are supported")
+        self.method = method
         self.iter = iter
         self.burn = burn
         self.thin = thin
-        self.sampler = None
 
     def fit(self, df, y=None):
         return self
 
     def construct_net(self, df):
-        """fit your bayes net here and return sampler"""
+        """fit your bayes net here and return pymc.Model"""
         raise NotImplementedError()
 
-    def sample(self):
-        self.sampler.sample(iter=self.iter, burn=self.burn, thin=self.thin)
+    def sample(self, model):
+        sampler = pymc.MCMC(model)
+        sampler.sample(iter=self.iter, burn=self.burn, thin=self.thin)
+        return sampler
 
     def transform(self, df):
-        self.sampler = self.construct_net(df)
-        self.sample()
-        return predict(self.sampler, df)
+        model = self.construct_net(df)
+        if self.method == 'MAP':
+            pymc.MAP(model).fit()
+            transformed_df = df.copy()
+            for node in model.stochastics:
+                name = str(node)
+                transformed_df[name] = node.value + 0
+            return transformed_df
+        else:
+            sampler = self.sample(model)
+            return predict(sampler, df)
 
-
-def test_RSWImputer_imputes_stuff():
-    from dstk.pymc_utils import make_bernoulli, cartesian_child
-    import pymc
-
-    # in this dataset 'rain' and 'sprinkler' are independent,
-    # while 'wet_sidewalk' is true iff either 'rain' or 'sprinkler' or both
-    full_data = pd.DataFrame({
-        'rain':         [0, 0, 1, 1, 1, 1, 0, 0],
-        'sprinkler':    [0, 1, 1, 0, 1, 0, 1, 0],
-        'wet_sidewalk': [0, 1, 1, 1, 1, 1, 1, 0]
-    })
-
-    data = pd.DataFrame({
-        'rain':         [0, 0, 1, 1, 1, -1, 0, -1],
-        'sprinkler':    [0, 1, 1, 0, 1, 0, 1, -1],
-        'wet_sidewalk': [0, 1, 1, 1, 1, 1, -1, 0]
-    })
-
-    class RSWImputer(BayesNetImputer):
-
-        def construct_net(self, df):
-            rain_data = mask_missing(df.rain)
-            sprinkler_data = mask_missing(df.sprinkler)
-            sidewalk_data = mask_missing(df.wet_sidewalk)
-
-            rain = make_bernoulli('rain', value=rain_data)
-            sprinkler = make_bernoulli('sprinkler', value=sprinkler_data)
-            sidewalk = cartesian_child('wet_sidewalk', parents=[rain, sprinkler],
-                                       value=sidewalk_data)
-
-            model = pymc.Model([rain, sprinkler, sidewalk])
-            sampler = pymc.MCMC(model)
-            return sampler
-
-    imputer = RSWImputer()
-
-    filled_data = imputer.fit(data).transform(data)
-    assert filled_data.equals(full_data)
+    def fit_transform(self, X, y=None):
+        return self.transform(X)
