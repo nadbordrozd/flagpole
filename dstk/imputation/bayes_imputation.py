@@ -44,7 +44,7 @@ def predict(sampler, data):
 
 class BayesNetImputer(object):
 
-    def __init__(self, method='MAP', iter=500, burn=300, thin=2):
+    def __init__(self, method='MAP', opt_method='fmin', iter=500, burn=300, thin=2):
         """superclass of bayes-net-based models for imputing missing data
 
         To use this imputer, it should be subclassed and the methods 'construct_net' should be
@@ -66,8 +66,10 @@ class BayesNetImputer(object):
         In theory these methods should be equivalent for categorical variables, but MAP should be
         much faster.
 
-        :param method: either 'MAP' or 'MCMC', defaults to 'MAP'. If 'MAP' then, there will be no
-            sampling, just optimisation and 'iter', 'burn', 'thin' parameters will have no effect.
+        :param method: either 'MAP' or 'MCMC', defaults to 'MAP'.
+        :param opt_method: one of scipy.optimize methods
+            'fmin_l_bfgs_b', 'fmin_ncg', 'fmin_cg', 'fmin_powell', 'fmin'
+            Only applies then 'method' is 'MAP'
         :param iter: total number iteratoins (only for 'MCMC' method)
         :param burn: number of initial iterations to discard (only for 'MCMC')
         :param thin: discard all except every nth iteration where n=thin
@@ -75,6 +77,7 @@ class BayesNetImputer(object):
         if method not in ['MAP', 'MCMC']:
             raise ValueError("only 'MAP' and 'MCMC' methods are supported")
         self.method = method
+        self.opt_method = opt_method
         self.iter = iter
         self.burn = burn
         self.thin = thin
@@ -92,9 +95,10 @@ class BayesNetImputer(object):
         return sampler
 
     def transform(self, df):
+        df = df.copy()
         model = self.construct_net(df)
         if self.method == 'MAP':
-            pymc.MAP(model).fit()
+            pymc.MAP(model).fit(method=self.opt_method)
             transformed_df = df.copy()
             for node in model.stochastics:
                 name = str(node)
