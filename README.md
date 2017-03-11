@@ -3,7 +3,7 @@ buncha utils for ml and ds
 
 Installation:
 ```
-sudo pip install git+git://github.com/nadbor-aimia/ds-tools.git
+sudo pip install git+git://github.com/nadbordrozd/ds-tools.git
 ```
 
 Usage:
